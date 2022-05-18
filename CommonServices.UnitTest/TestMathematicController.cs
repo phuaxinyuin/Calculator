@@ -57,7 +57,8 @@ public class TestMathematicController
 			new object[] { "23 - ( 29.3 - 12.5 )", 6.2 },
 			new object[] { "( 1 / 2 ) - 1 + 1", 0.5 },
 			new object[] { "10 - ( 2 + 3 * ( 7 - 5 ) )", 2 },
-			// additional handling
+			// additional handling	  
+			new object[] { "- 2", -2 },
 			new object[] { "( 6 )", 6 },
 			new object[] { "( -10 )", -10 },
 			new object[] { "( ( -9.6 ) )", -9.6 },
@@ -78,7 +79,8 @@ public class TestMathematicController
 			new object[] { "( 3 * 2 ) ^ 2", 36 },
 			new object[] { "-10 / -2", 5 },
 			new object[] { "2 ^ 2 ^ 3", 256 },
-			new object[] { "1  +   1", 2 }
+			new object[] { "1  +   1", 2 },
+			new object[] { "1 x 1", 1 }
 	   };
 
 	public static IEnumerable<object[]> InvalidData =>
@@ -86,6 +88,9 @@ public class TestMathematicController
 		{
 			new object[] { "+ 1 + 1", ErrorMessage.InvalidInput },
 			new object[] { "+ 1 ! 1", ErrorMessage.InvalidInput },
-			new object[] { "1 + S", ErrorMessage.InvalidInput }
+			new object[] { "1 + S", ErrorMessage.InvalidInput },
+			new object[] { "-", ErrorMessage.InvalidInput },
+			new object[] { "- +", ErrorMessage.InvalidInput },
+			new object[] { "2 2", ErrorMessage.OperatorNotFound }
 		};
 }

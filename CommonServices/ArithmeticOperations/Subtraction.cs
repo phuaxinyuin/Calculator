@@ -19,5 +19,19 @@ namespace CommonServices.ArithmeticOperations
 		{
 			return LeftAssociativityIndex(items, targetSymbol);
 		}
+
+		public override bool Validate(List<string> items, int index, out double number1, out double number2)
+		{
+			if (index == 0)
+			{
+				number1 = 0;
+				return double.TryParse(items[index + 1], out number2);
+			}
+			else
+			{
+				number2 = 0;
+				return double.TryParse(items[index - 1], out number1) && double.TryParse(items[index + 1], out number2);
+			}
+		}
 	}
 }
