@@ -86,6 +86,7 @@ public class TestMathematicController
 	public static IEnumerable<object[]> InvalidData =>
 		new List<object[]>
 		{
+			new object[] { "   ", ErrorMessage.InvalidInput },
 			new object[] { "+ 1 + 1", ErrorMessage.InvalidInput },
 			new object[] { "+ 1 ! 1", ErrorMessage.InvalidInput },
 			new object[] { "1 + S", ErrorMessage.InvalidInput },

@@ -21,7 +21,7 @@ namespace CommonServices.Controllers
 		{
 			try
 			{
-				var result = Calculator.Calculate(mathEquation);
+				var result = Calculator.Solve(mathEquation);
 				return Ok(result);
 			}
 			catch (Exception ex)

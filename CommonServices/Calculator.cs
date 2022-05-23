@@ -15,75 +15,85 @@ namespace CommonServices
 																	.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
 																	.Where(fi => fi.IsLiteral && !fi.IsInitOnly)
 																	.Select(x => x.GetRawConstantValue() as string);
-		public static double Calculate(string mathEquation)
+
+		// Math Order of Operations - PEMDAS
+		public static double Solve(string mathEquation)
 		{
-			var mathEquationItems = mathEquation.Split(separator).ToList();
+			SimplifyEquation(mathEquation, out List<string> mathEquationItems);
+
+			while (mathEquationItems.Count > 1)
+			{
+				// step 1 : Get the first math equation that need to be resolved, this is to cater parentheses or brackets
+				var targetMathEquationItems = GetTargetMathEquation(mathEquationItems, out int startIndex, out int endIndex);
+
+				// step 2 : Calculate target math equation
+				var result = Calculate(targetMathEquationItems);
+
+				// step 3 : Replace the target math equation with the calculated result
+				mathEquationItems.RemoveRange(startIndex, endIndex - startIndex + 1);
+				mathEquationItems.Insert(startIndex, result);
+			}
+
+			return Convert.ToDouble(mathEquationItems.Single());
+		}
+
+		private static void SimplifyEquation(string mathEquation, out List<string> mathEquationItems)
+		{
+			if (string.IsNullOrWhiteSpace(mathEquation))
+			{
+				throw new Exception(ErrorMessage.InvalidInput);
+			}
+
+			mathEquationItems = mathEquation.Split(separator).ToList();
 
 			// Trim extra spaces
 			mathEquationItems.RemoveAll(x => string.IsNullOrEmpty(x));
 
-			SimplifyEquationItems(mathEquationItems);
-
-			// Math Order of Operations - PEMDAS
-			while (mathEquationItems.Count > 1)
+			var simplifiedEquationItems = new List<string>();
+			for (int i = 0; i < mathEquationItems.Count; i++)
 			{
-				var firstIndex = 0;
-				var lastIndex = mathEquationItems.Count - 1;
-				var targetMathEquationItems = mathEquationItems.ToList();
+				Validate(mathEquationItems, i);
 
-				// Solve expressions in parentheses first
-				if (mathEquationItems.Any(x => MathSymbol.ParenthesesSymbols.Contains(x)))
+				// Handle ( x ) ( y ) --> ( x ) * ( y )
+				// Handle x ( y ) --> x * ( y )
+				if (i > 0
+					&& mathEquationItems[i] == MathSymbol.ParenthesesOpening
+					&& (mathEquationItems[i - 1] == MathSymbol.ParenthesesClosing || double.TryParse(mathEquationItems[i - 1], out _)))
 				{
-					// Find innermost parentheses, proceed from left to right
-					// ( x ) ( y ) OR ( x * ( y - z ) )
-					lastIndex = mathEquationItems.IndexOf(MathSymbol.ParenthesesClosing);
-					firstIndex = mathEquationItems.LastIndexOf(MathSymbol.ParenthesesOpening, lastIndex);
-					targetMathEquationItems = mathEquationItems.GetRange(firstIndex + 1, lastIndex - firstIndex - 1);
+					simplifiedEquationItems.Add(MathSymbol.Multiplication1);
 				}
 
-				var result = RewriteEquation(targetMathEquationItems);
-				mathEquationItems.RemoveRange(firstIndex, lastIndex - firstIndex + 1);
-				mathEquationItems.Insert(firstIndex, result);
+				simplifiedEquationItems.Add(mathEquationItems[i]);
 			}
 
-			return Convert.ToDouble(mathEquationItems.First());
+			mathEquationItems.Clear();
+			mathEquationItems.AddRange(simplifiedEquationItems);
 		}
 
-		private static void SimplifyEquationItems(List<string> mathEquationItems)
+		private static List<string> GetTargetMathEquation(List<string> mathEquationItems, out int startIndex, out int endIndex)
 		{
-			if (mathEquationItems?.Any() ?? false)
+			startIndex = 0;
+			endIndex = mathEquationItems.Count - 1;
+			var targetMathEquationItems = mathEquationItems.ToList();
+
+			// Solve expressions in parentheses first
+			if (mathEquationItems.Any(x => MathSymbol.ParenthesesSymbols.Contains(x)))
 			{
-				var simplifiedEquationItems = new List<string>();
-				for (int i = 0; i < mathEquationItems.Count; i++)
-				{
-					Validate(mathEquationItems, i);
-
-					// Handle ( x ) ( y ) --> ( x ) * ( y )
-					// Handle x ( y ) --> x * ( y )
-					if (i > 0
-						&& mathEquationItems[i] == MathSymbol.ParenthesesOpening
-						&& (mathEquationItems[i - 1] == MathSymbol.ParenthesesClosing || double.TryParse(mathEquationItems[i - 1], out _)))
-					{
-						simplifiedEquationItems.Add(MathSymbol.Multiplication1);
-					}
-
-					simplifiedEquationItems.Add(mathEquationItems[i]);
-				}
-
-				mathEquationItems.Clear();
-				mathEquationItems.AddRange(simplifiedEquationItems);
+				// Find innermost parentheses, proceed from left to right
+				// ( x ) ( y ) OR ( x * ( y - z ) )
+				endIndex = mathEquationItems.IndexOf(MathSymbol.ParenthesesClosing);
+				startIndex = mathEquationItems.LastIndexOf(MathSymbol.ParenthesesOpening, endIndex);
+				targetMathEquationItems = mathEquationItems.GetRange(startIndex + 1, endIndex - startIndex - 1);
 			}
+
+			return targetMathEquationItems;
 		}
 
-		private static string RewriteEquation(List<string> mathEquationItems)
+		private static string Calculate(List<string> mathEquationItems)
 		{
-			double result = 0;
-
 			while (mathEquationItems.Count > 1)
 			{
-				var targetMathSymbol = mathEquationItems.LastOrDefault(x => MathSymbol.ExponentsSymbols.Contains(x))
-										?? mathEquationItems.FirstOrDefault(x => MathSymbol.MultiplicationDivisionSymbols.Contains(x))
-										?? mathEquationItems.FirstOrDefault(x => MathSymbol.AdditionSubtractionSymbols.Contains(x));
+				var targetMathSymbol = ArithmeticOperation.GetTargetMathSymbolByOperationsOrder(mathEquationItems);
 
 				if (targetMathSymbol != null)
 				{
@@ -92,14 +102,22 @@ namespace CommonServices
 					if (arithmeticOperation != null)
 					{
 						var symbolIndex = arithmeticOperation.GetIndex(mathEquationItems, targetMathSymbol);
-						var firstIndex = symbolIndex > 0 ? symbolIndex - 1 : 0;
-						var count = symbolIndex > 0 ? 3 : 2;
 
 						if (arithmeticOperation.Validate(mathEquationItems, symbolIndex, out double number1, out double number2))
 						{
-							result = arithmeticOperation.Calculate(number1, number2);
-							mathEquationItems.RemoveRange(firstIndex, count);
-							mathEquationItems.Insert(firstIndex, result.ToString());
+							double result = arithmeticOperation.Calculate(number1, number2);
+
+							var targetIndex = symbolIndex - 1;
+							var targetItemCount = 3;
+
+							if (symbolIndex == 0)
+							{
+								targetIndex = 0;
+								targetItemCount = 2;
+							}
+
+							mathEquationItems.RemoveRange(targetIndex, targetItemCount);
+							mathEquationItems.Insert(targetIndex, result.ToString());
 						}
 						else
 						{
@@ -117,7 +135,7 @@ namespace CommonServices
 				}
 			}
 
-			return mathEquationItems.First();
+			return mathEquationItems.Single();
 		}
 
 		private static void Validate(List<string> mathEquationItems, int currentIndex)
@@ -126,7 +144,8 @@ namespace CommonServices
 
 			if (mathEquationItems != null && mathEquationItems.Any())
 			{
-				var isSymbol = currentIndex == 0 ? MathSymbol.StartWithSymbols.Contains(mathEquationItems[currentIndex]) : mathSymbols.Contains(mathEquationItems[currentIndex]);
+				var startWithSymbols = new List<string> { MathSymbol.Subtraction, MathSymbol.ParenthesesOpening };
+				var isSymbol = currentIndex == 0 ? startWithSymbols.Contains(mathEquationItems[currentIndex]) : mathSymbols.Contains(mathEquationItems[currentIndex]);
 				var isNumericalValue = double.TryParse(mathEquationItems[currentIndex], out _);
 				isValid = mathEquationItems.Count == 1 ? isNumericalValue : (isSymbol || isNumericalValue);
 			}

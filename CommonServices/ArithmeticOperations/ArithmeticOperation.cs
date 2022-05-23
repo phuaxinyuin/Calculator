@@ -2,8 +2,12 @@
 
 namespace CommonServices.ArithmeticOperations
 {
-	public abstract class ArithmeticOperation
+	public abstract class ArithmeticOperation 
 	{
+		private static readonly List<string> _exponentsSymbols = new Exponents().Symbols;
+		private static readonly List<string> _multiplicationDivisionSymbols = new Multiplication().Symbols.Concat(new Division().Symbols).ToList();
+		private static readonly List<string> _additionSubtractionSymbols = new Addition().Symbols.Concat(new Subtraction().Symbols).ToList();
+
 		public abstract string Name { get; }
 		public abstract List<string> Symbols { get; }
 
@@ -21,7 +25,7 @@ namespace CommonServices.ArithmeticOperations
 			number2 = 0;
 			return double.TryParse(items[index - 1], out number1) && double.TryParse(items[index + 1], out number2);
 		}
-
+	
 		public int LeftAssociativityIndex(List<string> items, string targetSymbol)
 		{
 			return items.IndexOf(targetSymbol);
@@ -30,6 +34,14 @@ namespace CommonServices.ArithmeticOperations
 		public int RightAssociativityIndex(List<string> items, string targetSymbol)
 		{
 			return items.LastIndexOf(targetSymbol);
+		}
+
+		public static string? GetTargetMathSymbolByOperationsOrder(List<string> items)
+		{
+			// Math Order of Operations - PEMDAS
+			return items.LastOrDefault(x => _exponentsSymbols.Contains(x))
+				?? items.FirstOrDefault(x => _multiplicationDivisionSymbols.Contains(x))
+				?? items.FirstOrDefault(x => _additionSubtractionSymbols.Contains(x));
 		}
 	}
 }

@@ -13,9 +13,5 @@
 		public const string ParenthesesClosing = ")";
 
 		public static readonly List<string> ParenthesesSymbols = new() { ParenthesesOpening, ParenthesesClosing };
-		public static readonly List<string> MultiplicationDivisionSymbols = new() { Multiplication1, Multiplication2, Division1, Division2 };
-		public static readonly List<string> AdditionSubtractionSymbols = new() { Addition, Subtraction };
-		public static readonly List<string> ExponentsSymbols = new() { Exponents };
-		public static readonly List<string> StartWithSymbols = new() { Subtraction, ParenthesesOpening };
 	}
 }
