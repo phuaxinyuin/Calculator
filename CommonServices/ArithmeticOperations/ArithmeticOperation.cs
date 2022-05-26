@@ -4,11 +4,8 @@ namespace CommonServices.ArithmeticOperations
 {
 	public abstract class ArithmeticOperation 
 	{
-		private static readonly List<string> _exponentsSymbols = new Exponents().Symbols;
-		private static readonly List<string> _multiplicationDivisionSymbols = new Multiplication().Symbols.Concat(new Division().Symbols).ToList();
-		private static readonly List<string> _additionSubtractionSymbols = new Addition().Symbols.Concat(new Subtraction().Symbols).ToList();
-
 		public abstract string Name { get; }
+
 		public abstract List<string> Symbols { get; }
 
 		public abstract double Calculate(double number1, double number2);
@@ -34,14 +31,6 @@ namespace CommonServices.ArithmeticOperations
 		public int RightAssociativityIndex(List<string> items, string targetSymbol)
 		{
 			return items.LastIndexOf(targetSymbol);
-		}
-
-		public static string? GetTargetMathSymbolByOperationsOrder(List<string> items)
-		{
-			// Math Order of Operations - PEMDAS
-			return items.LastOrDefault(x => _exponentsSymbols.Contains(x))
-				?? items.FirstOrDefault(x => _multiplicationDivisionSymbols.Contains(x))
-				?? items.FirstOrDefault(x => _additionSubtractionSymbols.Contains(x));
 		}
 	}
 }

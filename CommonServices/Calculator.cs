@@ -6,15 +6,18 @@ namespace CommonServices
 {
 	public class Calculator
 	{
-		private static readonly string separator = " ";
-		private static readonly IEnumerable<ArithmeticOperation?> arithmeticOperations = typeof(ArithmeticOperation)
+		private static readonly string _separator = " ";
+		private static readonly IEnumerable<ArithmeticOperation?> _arithmeticOperations = typeof(ArithmeticOperation)
 																						.Assembly.GetTypes()
 																						.Where(t => t.IsSubclassOf(typeof(ArithmeticOperation)) && !t.IsAbstract)
 																						.Select(t => Activator.CreateInstance(t) as ArithmeticOperation);
-		private static readonly IEnumerable<string?> mathSymbols = typeof(MathSymbol)
+		private static readonly IEnumerable<string?> _mathSymbols = typeof(MathSymbol)
 																	.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
 																	.Where(fi => fi.IsLiteral && !fi.IsInitOnly)
 																	.Select(x => x.GetRawConstantValue() as string);
+		private static readonly List<string> _exponentsSymbols = new Exponents().Symbols;
+		private static readonly List<string> _multiplicationDivisionSymbols = new Multiplication().Symbols.Concat(new Division().Symbols).ToList();
+		private static readonly List<string> _additionSubtractionSymbols = new Addition().Symbols.Concat(new Subtraction().Symbols).ToList();
 
 		// Math Order of Operations - PEMDAS
 		public static double Solve(string mathEquation)
@@ -44,7 +47,7 @@ namespace CommonServices
 				throw new Exception(ErrorMessage.InvalidInput);
 			}
 
-			mathEquationItems = mathEquation.Split(separator).ToList();
+			mathEquationItems = mathEquation.Split(_separator).ToList();
 
 			// Trim extra spaces
 			mathEquationItems.RemoveAll(x => string.IsNullOrEmpty(x));
@@ -93,11 +96,13 @@ namespace CommonServices
 		{
 			while (mathEquationItems.Count > 1)
 			{
-				var targetMathSymbol = ArithmeticOperation.GetTargetMathSymbolByOperationsOrder(mathEquationItems);
+				var targetMathSymbol = mathEquationItems.LastOrDefault(x => _exponentsSymbols.Contains(x))
+										?? mathEquationItems.FirstOrDefault(x => _multiplicationDivisionSymbols.Contains(x))
+										?? mathEquationItems.FirstOrDefault(x => _additionSubtractionSymbols.Contains(x));
 
 				if (targetMathSymbol != null)
 				{
-					var arithmeticOperation = arithmeticOperations.SingleOrDefault(x => x?.Symbols.Contains(targetMathSymbol) ?? false);
+					var arithmeticOperation = _arithmeticOperations.SingleOrDefault(x => x?.Symbols.Contains(targetMathSymbol) ?? false);
 
 					if (arithmeticOperation != null)
 					{
@@ -145,7 +150,7 @@ namespace CommonServices
 			if (mathEquationItems != null && mathEquationItems.Any())
 			{
 				var startWithSymbols = new List<string> { MathSymbol.Subtraction, MathSymbol.ParenthesesOpening };
-				var isSymbol = currentIndex == 0 ? startWithSymbols.Contains(mathEquationItems[currentIndex]) : mathSymbols.Contains(mathEquationItems[currentIndex]);
+				var isSymbol = currentIndex == 0 ? startWithSymbols.Contains(mathEquationItems[currentIndex]) : _mathSymbols.Contains(mathEquationItems[currentIndex]);
 				var isNumericalValue = double.TryParse(mathEquationItems[currentIndex], out _);
 				isValid = mathEquationItems.Count == 1 ? isNumericalValue : (isSymbol || isNumericalValue);
 			}
